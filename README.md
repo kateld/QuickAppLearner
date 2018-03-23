@@ -126,6 +126,12 @@ npm是nodejs的包管理工具，然而这里我们还是需要把默认源改�
     - 在主机上运行`npm run server`
     - 会出现一个二维码，在调试器上扫描即可
 
+ ![image](https://github.com/williamfzc/QuickAppLearner/raw/master/pic/debuger.png)
+
+之后就可以愉快的运行了，自测的效果感觉还可以。
+
+![image](https://github.com/williamfzc/QuickAppLearner/blob/master/pic/example.png)
+
 ## 项目配置
 
 项目配置在`src/manifest.json`中。
@@ -240,6 +246,45 @@ npm是nodejs的包管理工具，然而这里我们还是需要把默认源改�
     - onCreate
     - onDestroy
 
+那么这些东西要写在哪里？我们随便打开一个index.ux文件可以发现，一般来说一个页面由三个部分组成，分别是template、style和script。这部分的代码将被放置到script下。
+
+    <template>
+    <!-- template里只能有一个根节点 -->
+    <div class="demo-page">
+        <text class="title">{{text}}</text>
+    </div>
+    </template>
+
+    <style>
+    .demo-page {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .title {
+        font-size: 40px;
+        text-align: center;
+    }
+    </style>
+
+    <script>
+    export default {
+        data: {
+            text: '欢迎打开详情页'
+        },
+        /**
+        * 当用户点击菜单按钮时触发，调用app中定义的方法showMenu
+        * 注意：使用加载器测试`创建桌面快捷方式`功能时，请先在`系统设置`中打开`应用加载器`的`桌面快捷方式`权限
+        */
+        onMenuPress() {
+            this.$app.showMenu()
+        }
+    }
+    </script>
+
+这三个部分的内容分别是，html本人，css本人和js脚本部分。可以看到quickapp的内层基本都是跟web走的是同一套理论，也算是未来的一大趋势吧。
+
 #### 页面生命周期
 
 页面通过ViewModel渲染，所以页面的生命周期指的就是ViewModel的生命周期。
@@ -269,6 +314,8 @@ npm是nodejs的包管理工具，然而这里我们还是需要把默认源改�
 
 - APP中可以同时运行多个页面，但是每次只能显示其中一个页面
 - 页面被切换隐藏时调用onHide()，页面被切换重新显示时调用onShow()
+
+code
 
     onShow () {
         console.info(`执行：获取页面显示状态属性：${this.$visible}`)  // true
@@ -324,7 +371,331 @@ npm是nodejs的包管理工具，然而这里我们还是需要把默认源改�
     console.info(`获取：manifest.json的应用名称：${this.$app.$def.manifest.name}`)
     console.info(`获取：manifest.json的config.data的数据：${this.$app.$data.name}`)
 
-理解起来也很容易，def是在app.ux中的对象，在app.ux内部调用自然直接this即可，在外部调用就需要通过`$app`中调用。另外，$app是确实存在的实体，而$def相当于它的一部分嵌入其中而已。
+理解起来也很容易，def是在app.ux中的对象，在app.ux内部调用自然直接this即可，在外部调用就需要通过`$app`中调用。另外，`$app`是确实存在的实体，而`$def`相当于它的一部分嵌入其中而已。
+
+### 页面布局
+
+在前面提到了，quickapp的页面都是跟web同一套渲染流程，只不过他将一些html标记映射成android的native组件了，渲染出来的东西不一样。那么要写页面的话，就需要在ux里先写好模板。虽然跟web很像，但实际上quickapp还是在html的基础上做了不少改变的。
+
+传统html该有的他都有，css选择器那一套跟原来基本保持原样，这里不过多赘述。着重讲一下不同的地方。
+
+#### for if show
+
+快应用很神奇的在html里加入了语法...
+
+先来看循环。在html里加入循环可以有效地解决批量渲染控件的问题。一般有三种使用语法，通过一段.ux代码来说：
+
+    <template>
+    <div class="tutorial-page">
+
+        <!-- 方式1：默认$item代表数组中的元素, $idx代表数组中的索引 -->
+        <div class="tutorial-row" for="{{list}}">
+        <text>{{$idx}}.{{$item.name}}</text>
+        </div>
+
+        <!-- 方式2：自定义元素变量名称 -->
+        <div class="tutorial-row" for="value in list">
+        <text>{{$idx}}.{{value.name}}</text>
+        </div>
+
+        <!-- 方式3：自定义元素、索引的变量名称 -->
+        <div class="tutorial-row" for="(personIndex, personItem) in list">
+        <text>{{personIndex}}.{{personItem.name}}</text>
+        </div>
+    </div>
+    </template>
+
+    <style lang="less">
+    .tutorial-page {
+        flex-direction: column;
+
+        .tutorial-row {
+            width: 85%;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+    }
+    </style>
+
+    <script>
+    export default {
+        onInit () {
+            this.$page.setTitleBar({ text: '指令for' })
+        },
+        # 这里的list就可以直接插入到html里了
+        data: {
+            list: [{name: 'aa'}, { name: 'bb' }]
+        }
+    }
+    </script>
+
+那么if跟show，这两个主要用于管理控件的出现与否。同样来一段.ux代码：
+
+    <template>
+    <div class="tutorial-page">
+        <text onclick="onClickShow">显示隐藏：</text>
+        <!-- show的功能是，可以根据值的不同让控件显示与消失，但它的消失并不会从DOM树移除 -->
+        <text show="{{showVar}}">show: 渲染但控制是否显示</text>
+
+        <!-- 这里可以看到，if的功能主要是用于控制应该渲染什么样的控件 -->
+        <!-- 需要注意的是同一套if elif else的节点需要是兄弟节点 -->
+        <text onclick="onClickCondition">条件指令：</text>
+        <text if="{{conditionVar === 1}}">if: if条件</text>
+        <text elif="{{conditionVar === 2}}">elif: elif条件</text>
+        <text else>else: 其余</text>
+    </div>
+    </template>
+
+    <style lang="less">
+    .tutorial-page {
+        flex-direction: column;
+    }
+    </style>
+
+    <script>
+    export default {
+        onInit () {
+        this.$page.setTitleBar({ text: '指令if与指令show' })
+        },
+        data: {
+        showVar: true,
+        conditionVar: 1
+        },
+        onClickShow () {
+        this.showVar = !this.showVar
+        },
+        onClickCondition () {
+        this.conditionVar = ++this.conditionVar % 3
+        }
+    }
+    </script>
+
+#### block slot
+
+显而易见的，我们如果在这里面把逻辑都写在一起，代码将变得异常混乱。好在我们还有block组件。block组件在quickapp上主要承担逻辑分块的作用，因为它没有对应的native组件，所以它是不会被渲染到页面上的。所以用它来分隔代码块是很合适的。
+
+    <template>
+    <div class="tutorial-page">
+        <text onclick="toggleCityList">点击：控制是否显示城市</text>
+        <list>
+        <block for="city in cityList" if="{{showCityList === 1}}">
+            <list-item type="city">
+            <text>城市：{{city.name}}</text>
+            <block for="{{city.spots}}">
+                <div show="{{city.showSpots}}">
+                <text>景点：{{$item.name}}</text>
+                </div>
+            </block>
+            </list-item>
+        </block>
+        </list>
+    </div>
+    </template>
+
+看起来很乱对吧，没关系，我们还可以把他们拆分到不同文件里去，把整个页面拆分成若干子组件，最后再进行拼接渲染得到整个页面。
+
+slot节点用于向开发者额外开发的自定义ux组件中插入内容。例如我们自定义组件part1.ux：
+
+    <!-- part1.ux -->
+    <template>
+    <div>
+        <text>{{ header }}</text>
+        <!-- 这里用了slot -->
+        <slot></slot>
+        <text>{{ footer }}</text>
+    </div>
+    </template>
+
+    <style>
+    </style>
+
+    <script>
+    export default {
+        props: [
+            'header', 'footer'
+        ]
+    }
+    </script>
+
+然后我们在index.ux里导入它
+
+    <!-- index.ux -->
+    <import src="./part1"></import>
+
+    <template>
+        <!-- 这里就可以根据需要定义slot部分的内容 -->
+        <!-- 同时，这里就是把part1的template部分给导进来了 -->
+        <part1 class="component" header="{{header}}" footer="{{footer}}">
+            <text>slot节点内容</text>
+        </part1>
+    </template>
+
+    <style>
+    .component {
+        flex-direction: column;
+    }
+    </style>
+
+    <script>
+    export default {
+        onInit () {
+            this.$page.setTitleBar({ text: '组件slot' })
+        },
+        data: {
+            'header': 'HEAD',
+            'footer': 'FOOT'
+        }
+    }
+    </script>
+
+最终效果就是，index.ux也会有part1.ux里的组件。这种设计方案是非常推荐的，非常方便后期的管理与逻辑分块。这部分后面会细讲。
+
+### 页面切换和参数传递
+
+本部分主要四个内容：
+
+- 通过组件a切换页面和传递参数
+- 通过接口router切换页面和传递参数
+- 接收参数
+- 回传参数
+
+#### a
+
+a在html中主要起到跳转作用，在quickapp也是一样的。
+
+    <template>
+    <div class="tutorial-page">
+        <!-- 添加参数 -->
+        <!-- 这里跳转是根据路由的设定来的，基本就跟web一样 -->
+        <a href="/PageParams/receiveparams?key=Hello, world!">携带参数key1跳转</a>
+        <!-- 添加变量参数 -->
+        <a href="/PageParams/receiveparams?key={{title}}">携带参数key2跳转</a>
+    </div>
+    </template>
+
+他还可以唤起其他app的功能，例如拨打电话、sms、打开网页等等
+
+    <template>
+    <div class="tutorial-page">
+        <!-- 包含完整schema的uri -->
+        <a href="tel:10086">调起电话</a>
+        <a href="sms:10086">调起短信</a>
+        <a href="mailto:example@xx.com">调起邮件</a>
+        <!-- 打开webview加载网页 -->
+        <a href="https://www.baidu.com/">打开网页</a>
+    </div>
+    </template>
+
+#### router
+
+当然，直接写在a里面好像有些不灵活，那么我们也可以用类似android原生的控件监听，在script里管理跳转，此时控件只需要绑定对应的函数。
+
+    <template>
+    <div class="tutorial-page">
+        <input class="btn" type="button" value="跳转到接收参数页面" onclick="routePagePush"></input>
+        <input class="btn" type="button" value="跳转到接收参数页面，当前页面无法返回" onclick="routePageReplace"></input>
+        <input class="btn" type="button" value="返回上一页" onclick="routePageBack"></input>
+        <input class="btn" type="button" value="清空页面记录，仅保留当前页面" onclick="routePageClear"></input>
+    </div>
+    </template>
+
+    <script>
+    // 导入模块
+    import router from '@system.router'
+
+    export default {
+        onInit () {
+            this.$page.setTitleBar({ text: '接口router切换页面' })
+        },
+        routePagePush () {
+            // 跳转到应用内的某个页面
+            router.push({
+                uri: '/PageParams/receiveparams'
+            })
+            // 传递参数
+            params: { key: this.title }
+        },
+        routePageReplace () {
+            // 跳转到应用内的某个页面，当前页面无法返回
+            router.replace({
+                uri: '/PageParams/receiveparams'
+            })
+        },
+        routePageBack () {
+            // 返回上一页面
+            router.back()
+        },
+        routePageClear () {
+            // 清空所有历史页面记录，仅保留当前页面
+            router.clear()
+        }
+    }
+    </script>
+
+#### 接收参数
+
+接收参数就很简单了，只需要在data里面声明好就可以用了。
+
+    <script>
+    export default {
+        data: {
+            key: ''
+        },
+        onInit () {
+            this.$page.setTitleBar({ text: '接收参数' })
+
+            // js中输出页面传递的参数
+            console.info('key: ' + this.key)
+        }
+    }
+    </script>
+
+#### 回调函数
+
+在开发中我们可能会遇到先从页面A跳转至页面B，然后从页面B返回到页面A时，需要传递参数的情况。这种情况下比较麻烦，一般靠APP级别的全局参数来解决。
+
+页面A
+
+    <script>
+    export default {
+        data: {
+            msg: ''
+        },
+        onInit () {
+            this.$page.setTitleBar({ text: '页面A' })
+        },
+        onShow () {
+            // 页面被切换显示时，从global数据中检查是否有页面B传递来的数据
+            if (this.$app.$data.dataPageB && this.$app.$data.dataPageB.gotoPage === 'pageA') {
+                // 从global数据中获取回传给本页面的数据
+                var data = this.$app.$data.dataPageB.params;
+                this.msg = data.msg;
+            }
+        }
+    }
+    </script>
+
+页面B
+
+    <script>
+    export default {
+        data: {
+            msg: ''
+        },
+        onInit () {
+            this.$page.setTitleBar({ text: '页面B' })
+        },
+        onHide () {
+            // 页面被切换隐藏时，将要传递的数据对象写入global数据
+            this.$app.$data.dataPageB = {
+                gotoPage: 'pageA',
+                params: {
+                msg: this.msg
+                }
+            }
+        },
+    }
+    </script>
 
 
 
