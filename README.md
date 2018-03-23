@@ -1,5 +1,9 @@
 # QuickAppLearner
 
+- 结合官方文档，旨在让开发者更快了解、体验、开发QuickApp。
+- 行文仓促，有bug恳请通过issue告知。
+- 欢迎PR。
+
 ## 环境配置
 
 quick app需要nodejs环境。
@@ -92,9 +96,19 @@ npm是nodejs的包管理工具，然而这里我们还是需要把默认源改�
 
 ### 安装调试器
 
-现在quickapp还处于一个比较初步的阶段，要调试的话我们需要安装调试器及平台。因为迭代速度比较快，要获取最新的安装方式请移步[这里](https://doc.quickapp.cn/tutorial/getting-started/hello-world.html)
+现阶段如果要在其他手机上体验快应用，需要安装下面这两个apk，点击下载：
 
-按照上面的提示安装rpk，就可以在手机上看到效果了。
+- [调试器](https://statres.quickapp.cn/quickapp/quickapp/201803/file/201803221213415527241.apk)
+- [预览平台](https://statres.quickapp.cn/quickapp/quickapp/201803/file/20180322121456491785.apk)
+
+运行方案推荐两种，http与本地。
+
+- 本地
+    - 直接把rpk文件拖入手机，在调试器里本地安装即可
+- http
+    - 实质上是在主机上运行一个服务器，通过http请求调试
+    - 在主机上运行`npm run server`
+    - 会出现一个二维码，在调试器上扫描即可
 
 ## 项目结构
 
