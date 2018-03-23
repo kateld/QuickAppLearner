@@ -35,7 +35,7 @@ nvm的全称是Node Version Manager，一套使用广泛的nodejs版本管理工
 
 安装完毕后可以输入`nvm`确认一下是否安装成功。
 
-安装完之后需要将nvm源修改为taobao源，在`.bashrc`末尾加入：
+安装完之后需要将nvm源修改为taobao源，在`~/.bashrc`末尾加入：
 
     NVM_NODEJS_ORG_MIRROR=https://npm.taobao.org/mirrors/node
 
@@ -209,6 +209,114 @@ npm是nodejs的包管理工具，然而这里我们还是需要把默认源改�
             }
         }
     }
+
+
+### 生命周期
+
+与android应用相同，快应用也具备类似的生命周期。但相对而言要简明许多。
+
+- 页面的生命周期
+    - onInit
+    - onReady
+    - onShow
+    - onHide
+    - onDestroy
+    - onBackPress
+    - onMenuPress
+- 页面的状态：
+    - 显示
+    - 隐藏
+    - 销毁
+- APP的生命周期：
+    - onCreate
+    - onDestroy
+
+#### 页面生命周期
+
+页面通过ViewModel渲染，所以页面的生命周期指的就是ViewModel的生命周期。
+
+##### onInit
+
+表示数据已经准备好，可以使用props、data中的数据。
+
+    data: {
+        // 生命周期的文本列表
+        lcList: []
+    },
+    onInit () {
+        // 可以调用lcList
+        this.lcList.push('onInit')
+    }
+
+##### onReady
+
+因为快应用是一种类似web应用的模式，页面会有相应的模板。这个方法表示模板加载已经完成，可以开始进行模板级别的操作例如嵌入数据。
+
+    onReady () {
+        console.info(${this.$rootElement()}`)
+    }
+
+##### onHide与onShow
+
+- APP中可以同时运行多个页面，但是每次只能显示其中一个页面
+- 页面被切换隐藏时调用onHide()，页面被切换重新显示时调用onShow()
+
+    onShow () {
+        console.info(`执行：获取页面显示状态属性：${this.$visible}`)  // true
+    }
+    onHide () {
+        console.info(`执行：获取页面显示状态属性：${this.$visible}`)  // false
+    }
+
+##### onDestroy
+
+页面被销毁时调用，被销毁的可能原因有：用户从当前页面返回到上一页，或者用户打开了太多的页面，框架自动销毁掉部分页面，避免占用资源。
+
+要注意的是，页面销毁之后，绑定在上面的方法将不再执行。
+
+##### onBackPress
+
+三种情况下触发：
+
+- 返回实体按键
+- 左上角返回菜单
+- 调用返回的API
+
+##### onMenuPress
+
+在manifest中允许菜单出现后，在点击展开菜单时会调用。
+
+#### 页面状态
+
+总的来说页面状态只有三种：
+
+- 显示
+    - 该页面是当前正在显示的页面，可以用$visible判断
+- 隐藏
+    - 打开新页面后该页面被隐藏，但未被销毁的页面
+- 销毁
+    - 因某原因销毁后页面将处于这个状态
+
+#### APP状态
+
+当前为APP的生命周期提供了两个回调函数：onCreate, onDestroy；可在app.ux中定义回调函数。在app.ux中，开发者可以做一些独立于页面的操作。比如：引入公共的JS资源，然后暴露给所有页面。
+
+在不同ux中调用方法的方式是不同的。在app.ux中：
+
+    console.info(`获取：APP文件中的数据：${this.$def.data1.name}`)
+    console.info(`执行：APP文件中的方法`, this.$def.method1())
+    console.info(`获取：manifest.json的应用名称：${this.$def.manifest.name}`)
+    console.info(`获取：manifest.json的config.data的数据：${this.$data.name}`)
+
+在pageName.ux中，通过this.$app访问app.ux中定义的数据和方法，如下：
+
+    console.info(`获取：APP文件中的数据：${this.$app.$def.data1.name}`)
+    console.info(`执行：APP文件中的方法`, this.$app.$def.method1())
+    console.info(`获取：manifest.json的应用名称：${this.$app.$def.manifest.name}`)
+    console.info(`获取：manifest.json的config.data的数据：${this.$app.$data.name}`)
+
+理解起来也很容易，def是在app.ux中的对象，在app.ux内部调用自然直接this即可，在外部调用就需要通过`$app`中调用。另外，$app是确实存在的实体，而$def相当于它的一部分嵌入其中而已。
+
 
 
 ... building
